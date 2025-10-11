@@ -1,0 +1,16 @@
+.{
+    .name = .unlocked,
+    .version = "0.1.0",
+    .fingerprint = 0x10b1e17d3200a8d,
+    .minimum_zig_version = "0.14.1",
+
+    .dependencies = .{},
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "lib",
+        "LICENSE",
+    },
+}
