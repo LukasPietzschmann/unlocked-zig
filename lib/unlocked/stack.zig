@@ -19,6 +19,12 @@ pub fn LockFreeStack(comptime T: type) type {
             };
         }
 
+        pub fn deinit(self: *Self) void {
+            while (self.pop()) |value| {
+                _ = value;
+            }
+        }
+
         pub fn push(self: *Self, value: T) !void {
             var new_head = try self.allocator.create(Node);
             new_head.* = Node{
