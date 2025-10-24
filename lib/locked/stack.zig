@@ -4,34 +4,54 @@ pub fn Stack(comptime T: type) type {
     return struct {
         const Self = @This();
 
+        const Node = struct {
+            value: T,
+            next: ?*Node,
+        };
+
+        top: ?*Node,
         allocator: std.mem.Allocator,
-        backing: std.ArrayList(T),
         mutex: std.Thread.Mutex,
 
         pub fn init(allocator: std.mem.Allocator) Self {
             return Self{
+                .top = null,
                 .allocator = allocator,
-                .backing = std.ArrayList(T).init(allocator),
                 .mutex = std.Thread.Mutex{},
             };
         }
 
         pub fn deinit(self: *Self) void {
-            self.backing.deinit();
+            while (self.pop()) |value| {
+                _ = value;
+            }
         }
 
-        pub fn push(self: *Self, item: T) !void {
+        pub fn push(self: *Self, value: T) !void {
+            const new_head = try self.allocator.create(Node);
+
             self.mutex.lock();
             defer self.mutex.unlock();
 
-            try self.backing.append(item);
+            new_head.* = Node{
+                .value = value,
+                .next = self.top,
+            };
+            self.top = new_head;
         }
 
         pub fn pop(self: *Self) ?T {
             self.mutex.lock();
             defer self.mutex.unlock();
 
-            return self.backing.pop();
+            if (self.top) |top| {
+                const value = top.value;
+                self.top = top.next;
+                self.allocator.destroy(top);
+                return value;
+            } else {
+                return null;
+            }
         }
 
         pub fn peek(self: *Self) ?T {

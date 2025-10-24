@@ -33,9 +33,9 @@ pub fn LockFreeStack(comptime T: type) type {
             };
 
             while (true) {
-                const old_head = self.top.load(.seq_cst);
+                const old_head = self.top.load(.acquire);
                 new_head.next = old_head;
-                if (self.top.cmpxchgWeak(old_head, new_head, .seq_cst, .seq_cst) == null) {
+                if (self.top.cmpxchgWeak(old_head, new_head, .release, .acquire) == null) {
                     return;
                 }
             }
@@ -43,16 +43,14 @@ pub fn LockFreeStack(comptime T: type) type {
 
         pub fn pop(self: *Self) ?T {
             while (true) {
-                const old_head = self.top.load(.seq_cst);
-                if (old_head) |node_to_pop| {
-                    const new_head = node_to_pop.next;
-                    if (self.top.cmpxchgWeak(old_head, new_head, .seq_cst, .seq_cst) == null) {
-                        const value = node_to_pop.value;
-                        self.allocator.destroy(node_to_pop);
-                        return value;
-                    }
-                } else {
+                const old_head = self.top.load(.acquire) orelse {
                     return null;
+                };
+                const new_head = old_head.next;
+                if (self.top.cmpxchgWeak(old_head, new_head, .acquire, .monotonic) == null) {
+                    const value = old_head.value;
+                    self.allocator.destroy(old_head);
+                    return value;
                 }
             }
         }
